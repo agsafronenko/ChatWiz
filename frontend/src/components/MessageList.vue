@@ -1,8 +1,6 @@
 <template>
   <div class="message-list" ref="messageList">
-    <div v-if="messages.length === 0" class="empty-state">
-      No messages yet. Be the first to say hello!
-    </div>
+    <div v-if="messages.length === 0" class="empty-state">No messages yet. Be the first to say hello!</div>
     <div v-for="(message, index) in messages" :key="index" class="message">
       <div class="message-header">
         <span class="username" :class="{ system: message.username === 'System' }">
@@ -16,34 +14,44 @@
 </template>
 
 <script>
-import { formatTime } from '../utils/formatters';
+import { formatTime } from "../utils/formatters";
 
 export default {
-  name: 'MessageList',
+  name: "MessageList",
   props: {
     messages: {
       type: Array,
-      default: () => []
-    }
+      default: () => [],
+    },
   },
   methods: {
     formatTime,
     scrollToBottom() {
       this.$nextTick(() => {
         if (this.$refs.messageList) {
-          this.$refs.messageList.scrollTop = this.$refs.messageList.scrollHeight;
+          const messageList = this.$refs.messageList;
+          // Using smooth scrolling with a slight delay to ensure content is rendered
+          setTimeout(() => {
+            messageList.scrollTop = messageList.scrollHeight;
+          }, 50);
         }
       });
-    }
+    },
   },
   watch: {
-    messages() {
+    // Watch the messages array length to detect new messages
+    "messages.length": function () {
       this.scrollToBottom();
-    }
+    },
+  },
+  updated() {
+    // Also try to scroll on component update
+    this.scrollToBottom();
   },
   mounted() {
+    // Initial scroll when component is mounted
     this.scrollToBottom();
-  }
+  },
 };
 </script>
 
@@ -52,6 +60,7 @@ export default {
   flex: 1;
   overflow-y: auto;
   padding: 15px;
+  scroll-behavior: smooth;
 }
 
 .empty-state {
