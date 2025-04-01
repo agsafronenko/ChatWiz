@@ -1,0 +1,1 @@
+<span class="timestamp">{{ formatTime(message.timestamp) }}</span>

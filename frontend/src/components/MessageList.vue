@@ -1,20 +1,30 @@
 <template>
   <div class="message-list" ref="messageList">
     <div v-if="messages.length === 0" class="empty-state">No messages yet. Be the first to say hello!</div>
-    <div v-for="(message, index) in messages" :key="index" :class="{ message: true, 'system-message': message.username === 'System' }">
-      <template v-if="message.username !== 'System'">
-        <div class="message-header">
-          <span class="username">{{ message.username }}</span>
+
+    <template v-for="(message, index) in messages">
+      <!-- System messages (unchanged) -->
+      <div v-if="message.username === 'System'" :key="`system-${index}`" class="system-message">
+        <div class="system-notification">
+          <span>{{ message.content }}</span>
           <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
         </div>
-        <div class="message-content">{{ message.content }}</div>
-      </template>
-
-      <div v-else class="system-notification">
-        <span>{{ message.content }}</span>
-        <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
       </div>
-    </div>
+
+      <!-- Regular user messages with grouping -->
+      <div v-else :key="`user-${index}`" class="message">
+        <!-- Show username only if it's a new user or first message -->
+        <div v-if="shouldShowUsername(index)" class="username">
+          {{ message.username }}
+        </div>
+
+        <!-- Message content with timestamp on the same row -->
+        <div class="message-content-row">
+          <div class="message-content">{{ message.content }}</div>
+          <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -42,19 +52,25 @@ export default {
         }
       });
     },
+    shouldShowUsername(index) {
+      if (index === 0) return true;
+
+      const currentMessage = this.messages[index];
+      const previousMessage = this.messages[index - 1];
+
+      // Show username if previous message was from a different user or was a system message
+      return previousMessage.username !== currentMessage.username || previousMessage.username === "System";
+    },
   },
   watch: {
-    // Watch the messages array length to detect new messages
     "messages.length": function () {
       this.scrollToBottom();
     },
   },
   updated() {
-    // Also try to scroll on component update
     this.scrollToBottom();
   },
   mounted() {
-    // Initial scroll when component is mounted
     this.scrollToBottom();
   },
 };
@@ -75,36 +91,43 @@ export default {
 }
 
 .message {
-  margin-bottom: 8px; /* Reduced from 15px */
-  padding-bottom: 6px; /* Reduced from 10px */
-  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 2px;
+  padding-bottom: 2px;
 }
 
-.system-message {
-  margin-bottom: 4px; /* Reduced from 8px */
-  padding-bottom: 4px; /* Reduced from 8px */
-  border-bottom: 1px dashed #f0f0f0;
-}
-
-.message-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 3px; /* Reduced from 5px */
-}
-
-.username {
+/* Add more space before a new user's messages */
+.message .username {
   font-weight: bold;
   color: #2c3e50;
-  font-size: 0.9rem; /* Reduced from default size */
+  font-size: 0.9rem;
+  margin-top: 8px;
+  margin-bottom: 4px;
 }
 
-.timestamp {
-  color: #999;
-  font-size: 0.8rem;
+.message-content-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-left: 8px;
+  padding-bottom: 4px;
 }
 
 .message-content {
   word-break: break-word;
+  flex: 1;
+}
+
+.timestamp {
+  color: #999;
+  font-size: 0.75rem;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.system-message {
+  margin: 8px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed #f0f0f0;
 }
 
 .system-notification {
@@ -113,8 +136,7 @@ export default {
   align-items: center;
   font-style: italic;
   color: #777;
-  font-size: 0.85rem; /* Slightly smaller than before */
-  margin: 2px 0;
+  font-size: 0.85rem;
 }
 
 .system-notification .timestamp {
