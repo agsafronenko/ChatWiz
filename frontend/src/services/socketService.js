@@ -7,7 +7,7 @@ class SocketService {
 
   initSocket() {
     // Connect to the backend server
-    this.socket = io(process.env.VUE_APP_SOCKET_ENDPOINT || "http://localhost:5000");
+    this.socket = io(process.env.VUE_APP_SOCKET_ENDPOINT);
 
     this.socket.on("connect", () => {
       console.log("Connected to server");
