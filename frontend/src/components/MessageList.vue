@@ -75,26 +75,27 @@ export default {
 }
 
 .message {
-  margin-bottom: 15px;
-  padding-bottom: 10px;
+  margin-bottom: 8px; /* Reduced from 15px */
+  padding-bottom: 6px; /* Reduced from 10px */
   border-bottom: 1px solid #f0f0f0;
 }
 
 .system-message {
-  margin-bottom: 8px;
-  padding-bottom: 8px;
+  margin-bottom: 4px; /* Reduced from 8px */
+  padding-bottom: 4px; /* Reduced from 8px */
   border-bottom: 1px dashed #f0f0f0;
 }
 
 .message-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 5px;
+  margin-bottom: 3px; /* Reduced from 5px */
 }
 
 .username {
   font-weight: bold;
   color: #2c3e50;
+  font-size: 0.9rem; /* Reduced from default size */
 }
 
 .timestamp {
@@ -112,7 +113,8 @@ export default {
   align-items: center;
   font-style: italic;
   color: #777;
-  font-size: 0.9rem;
+  font-size: 0.85rem; /* Slightly smaller than before */
+  margin: 2px 0;
 }
 
 .system-notification .timestamp {
