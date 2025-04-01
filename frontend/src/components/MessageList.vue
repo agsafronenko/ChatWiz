@@ -1,14 +1,19 @@
 <template>
   <div class="message-list" ref="messageList">
     <div v-if="messages.length === 0" class="empty-state">No messages yet. Be the first to say hello!</div>
-    <div v-for="(message, index) in messages" :key="index" class="message">
-      <div class="message-header">
-        <span class="username" :class="{ system: message.username === 'System' }">
-          {{ message.username }}
-        </span>
+    <div v-for="(message, index) in messages" :key="index" :class="{ message: true, 'system-message': message.username === 'System' }">
+      <template v-if="message.username !== 'System'">
+        <div class="message-header">
+          <span class="username">{{ message.username }}</span>
+          <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
+        </div>
+        <div class="message-content">{{ message.content }}</div>
+      </template>
+
+      <div v-else class="system-notification">
+        <span>{{ message.content }}</span>
         <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
       </div>
-      <div class="message-content">{{ message.content }}</div>
     </div>
   </div>
 </template>
@@ -75,6 +80,12 @@ export default {
   border-bottom: 1px solid #f0f0f0;
 }
 
+.system-message {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #f0f0f0;
+}
+
 .message-header {
   display: flex;
   justify-content: space-between;
@@ -86,10 +97,6 @@ export default {
   color: #2c3e50;
 }
 
-.username.system {
-  color: #9c27b0;
-}
-
 .timestamp {
   color: #999;
   font-size: 0.8rem;
@@ -97,5 +104,18 @@ export default {
 
 .message-content {
   word-break: break-word;
+}
+
+.system-notification {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-style: italic;
+  color: #777;
+  font-size: 0.9rem;
+}
+
+.system-notification .timestamp {
+  font-style: normal;
 }
 </style>
