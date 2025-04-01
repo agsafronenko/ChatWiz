@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Public Chat Room</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="chat-container">
+    <h1>Public Chat Room</h1>
+    
+    <div id="userInfo" class="user-info">
+      <p>You are chatting as: <strong id="username">Connecting...</strong></p>
+    </div>
+    
+    <div class="chat-window">
+      <div id="messageList" class="message-list">
+        <div id="emptyState" class="empty-state">No messages yet. Be the first to say hello!</div>
+        <!-- Messages will be inserted here -->
+      </div>
+      
+      <div class="message-input">
+        <form id="messageForm">
+          <input 
+            type="text" 
+            id="messageText" 
+            placeholder="Type a message..." 
+            autocomplete="off"
+          />
+          <button type="submit" id="sendButton" disabled>Send</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates for message items -->
+  <template id="userMessageTemplate">
+    <div class="message">
+      <div class="username"></div>
+      <div class="message-content-row">
+        <div class="message-content"></div>
+        <span class="timestamp"></span>
+      </div>
+    </div>
+  </template>
+
+  <template id="systemMessageTemplate">
+    <div class="system-message">
+      <div class="system-notification">
+        <span class="content"></span>
+        <span class="timestamp"></span>
+      </div>
+    </div>
+  </template>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="js/formatters.js"></script>
+  <script src="js/socketService.js"></script>
+  <script src="js/messageManager.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
