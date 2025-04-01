@@ -1,0 +1,83 @@
+### Python ###
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+ENV/
+env/
+
+# Flask
+instance/
+.webassets-cache
+
+# Socket.IO
+/node_modules/  # If you have Node dependencies in backend
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Environment files
+.env
+.env.local
+.env.*
+!.env.example  # Keep example env files
+
+# Development files
+.flaskenv
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+test-reports/
+
+### Vue.js ###
+# Node modules
+node_modules/
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Build files
+dist/
+build/
+.ssr/
+
+# Cache
+.cache/
+.temp/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Editor and IDE
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local development files
+.DS_Store
+Thumbs.db
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
