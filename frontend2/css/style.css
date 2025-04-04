@@ -27,6 +27,42 @@ h1 {
   text-align: center;
 }
 
+.auth-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  gap: 10px;
+  align-items: center;
+}
+
+.logout-btn {
+  padding: 8px 16px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.logout-btn:hover {
+  background-color: #d32f2f;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 5px;
+}
+
+.user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
 /* Chat Window Component */
 .chat-window {
   background-color: white;
@@ -57,7 +93,6 @@ h1 {
   padding-bottom: 2px;
 }
 
-/* Add more space before a new user's messages */
 .message .username {
   font-weight: bold;
   color: #2c3e50;
@@ -142,4 +177,9 @@ h1 {
 
 .message-input button:hover:not(:disabled) {
   background-color: #45a049;
+}
+
+/* Google Sign In button container */
+#googleLoginBtn {
+  display: inline-block;
 }

@@ -1,63 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Public Chat Room</title>
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-  <div class="chat-container">
-    <h1>Public Chat Room</h1>
-    
-    <div id="userInfo" class="user-info">
-      <p>You are chatting as: <strong id="username">Connecting...</strong></p>
-    </div>
-    
-    <div class="chat-window">
-      <div id="messageList" class="message-list">
-        <div id="emptyState" class="empty-state">No messages yet. Be the first to say hello!</div>
-        <!-- Messages will be inserted here -->
-      </div>
-      
-      <div class="message-input">
-        <form id="messageForm">
-          <input 
-            type="text" 
-            id="messageText" 
-            placeholder="Type a message..." 
-            autocomplete="off"
-          />
-          <button type="submit" id="sendButton" disabled>Send</button>
-        </form>
-      </div>
-    </div>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Public Chat Room</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div class="chat-container">
+      <h1>Public Chat Room</h1>
 
-  <!-- Templates for message items -->
-  <template id="userMessageTemplate">
-    <div class="message">
-      <div class="username"></div>
-      <div class="message-content-row">
-        <div class="message-content"></div>
-        <span class="timestamp"></span>
+      <div id="userInfo" class="user-info">
+        <p>You are chatting as: <strong id="username">Connecting...</strong></p>
+        <div id="authSection" class="auth-section">
+          <div id="googleLoginBtn"></div>
+          <button id="logoutBtn" class="logout-btn" style="display: none">Logout</button>
+        </div>
+      </div>
+
+      <div class="chat-window">
+        <div id="messageList" class="message-list">
+          <div id="emptyState" class="empty-state">No messages yet. Be the first to say hello!</div>
+        </div>
+
+        <div class="message-input">
+          <form id="messageForm">
+            <input type="text" id="messageText" placeholder="Type a message..." autocomplete="off" />
+            <button type="submit" id="sendButton" disabled>Send</button>
+          </form>
+        </div>
       </div>
     </div>
-  </template>
 
-  <template id="systemMessageTemplate">
-    <div class="system-message">
-      <div class="system-notification">
-        <span class="content"></span>
-        <span class="timestamp"></span>
+    <template id="userMessageTemplate">
+      <div class="message">
+        <div class="username"></div>
+        <div class="message-content-row">
+          <div class="message-content"></div>
+          <span class="timestamp"></span>
+        </div>
       </div>
-    </div>
-  </template>
+    </template>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="js/formatters.js"></script>
-  <script src="js/socketService.js"></script>
-  <script src="js/messageManager.js"></script>
-  <script src="js/app.js"></script>
-</body>
+    <template id="systemMessageTemplate">
+      <div class="system-message">
+        <div class="system-notification">
+          <span class="content"></span>
+          <span class="timestamp"></span>
+        </div>
+      </div>
+    </template>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/formatters.js"></script>
+    <script src="js/authService.js"></script>
+    <script src="js/socketService.js"></script>
+    <script src="js/messageManager.js"></script>
+    <script src="js/app.js"></script>
+  </body>
 </html>
