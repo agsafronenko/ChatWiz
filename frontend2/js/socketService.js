@@ -7,19 +7,17 @@ class SocketService {
       newMessage: [],
     };
     this.authData = null;
-    this.reconnecting = false;
   }
 
   initSocket() {
     const serverUrl = CONFIG.SOCKET_ENDPOINT;
 
-    // Add query parameter with saved username if available
-    const savedUsername = localStorage.getItem("anonymousUsername");
+    // Add query parameter with saved user_id if available
+    const userId = localStorage.getItem("chatUserId");
     const options = {};
 
-    if (savedUsername) {
-      options.query = { username: savedUsername };
-      this.reconnecting = true;
+    if (userId) {
+      options.query = { user_id: userId };
     }
 
     // Connect to the backend server with query parameters
@@ -40,10 +38,11 @@ class SocketService {
 
     // Set up handlers for incoming events
     this.socket.on("user_info", (data) => {
-      // Store username in localStorage if not authenticated
-      if (!authService.isAuthenticated() && data.username) {
-        localStorage.setItem("anonymousUsername", data.username);
+      // Store user ID in localStorage
+      if (data.user_id) {
+        localStorage.setItem("chatUserId", data.user_id);
       }
+
       this.eventCallbacks.userInfo.forEach((callback) => callback(data));
     });
 
@@ -82,11 +81,6 @@ class SocketService {
       return true;
     }
     return false;
-  }
-
-  // Get saved username from localStorage
-  getSavedUsername() {
-    return localStorage.getItem("anonymousUsername");
   }
 
   // Event listener registration

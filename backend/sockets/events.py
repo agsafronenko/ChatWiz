@@ -3,19 +3,16 @@ from flask_socketio import emit
 from services.message_service import message_service
 from utils.name_generator import generate_random_name
 from datetime import datetime, timedelta
+import uuid
 
-# Store active users with their session IDs
-active_users = {}
-# Store authenticated users with their actual names by user ID
-authenticated_users = {}
-# Map of user IDs to their display names
-user_id_to_name = {}
-# Track previous names for each session to handle name changes correctly
-session_to_previous_names = {}
-# Track recent disconnects to handle page refreshes
+# Main user store - maps user IDs to their data
+users = {}
+
+# Session mapping - maps session IDs to user IDs
+session_to_user_id = {}
+
+# Track disconnects to handle page refreshes
 recent_disconnects = {}
-# Track renamed users to prevent "left chat" messages after rename
-renamed_users = set()
 
 def register_socket_events(socketio):
     """Register all socket.io event handlers"""
@@ -25,185 +22,159 @@ def register_socket_events(socketio):
         """Handle new client connection"""
         session_id = request.sid
         
-        # Check if the user is providing their previous username in the query parameters
-        saved_username = None
-        if request.args and 'username' in request.args:
-            saved_username = request.args.get('username')
-        
-        is_reconnect = saved_username is not None
-        
-        if is_reconnect and saved_username not in [active_users[sid] for sid in active_users]:
-            # Use the saved username if it's valid and not already in use
-            username = saved_username
+        # Check if the user is reconnecting with an existing user ID
+        user_id = None
+        if request.args and 'user_id' in request.args:
+            user_id = request.args.get('user_id')
             
-            # Check if this is a reconnect from a recent disconnect (page refresh)
-            if saved_username in recent_disconnects:
-                # Remove from recent disconnects to prevent duplicate "joined" messages
-                del recent_disconnects[saved_username]
-                
-            # Also check if this was a renamed user
-            if saved_username in renamed_users:
-                renamed_users.remove(saved_username)
-        else:
-            # Generate a new random name
+        is_new_user = False
+        
+        # If no user_id or invalid user_id, create a new user
+        if not user_id or user_id not in users:
+            user_id = str(uuid.uuid4())
             username = generate_random_name()
+            is_new_user = True
+            
+            # Create new user entry
+            users[user_id] = {
+                'username': username,
+                'google_data': None,
+                'original_name': username,  # Store original name for logout
+                'is_logged_in': False
+            }
         
-        active_users[session_id] = username
+        # Map this session to the user ID
+        session_to_user_id[session_id] = user_id
         
-        # Send user their assigned username
-        emit('user_info', {'username': username})
+        # Check if this is a reconnect after refresh
+        is_refresh = user_id in recent_disconnects
+        if is_refresh:
+            del recent_disconnects[user_id]
         
-        # Send chat history to the new user
+        # Send user their user data
+        emit('user_info', {
+            'user_id': user_id,
+            'username': users[user_id]['username'],
+            'is_logged_in': users[user_id]['is_logged_in']
+        })
+        
+        # Send chat history to the user
         emit('chat_history', message_service.get_messages())
         
-        # Notify all users about the new connection unless it's a reconnect
-        if not is_reconnect:
-            system_message = message_service.add_message('System', f'{username} has joined the chat')
+        # Notify all users about the new connection
+        if not is_refresh:
+            system_message = message_service.add_message(
+                'System', 
+                f"{users[user_id]['username']} has joined the chat"
+            )
             emit('new_message', system_message.to_dict(), broadcast=True)
     
     @socketio.on('authenticate')
     def handle_authentication(data):
-        """Handle user authentication"""
+        """Handle user authentication with Google"""
         session_id = request.sid
         
-        if 'name' in data and 'id' in data:
-            user_id = data['id']
-            new_username = data['name']
+        if session_id not in session_to_user_id:
+            return
             
-            # Check if this user ID is already known
-            previous_username = user_id_to_name.get(user_id)
+        user_id = session_to_user_id[session_id]
+        user = users[user_id]
+        
+        # Check if this is a new login or a refresh after login
+        is_new_login = not user['is_logged_in']
+        
+        # Store Google data
+        user['google_data'] = {
+            'id': data.get('id'),
+            'name': data.get('name'),
+            'isGoogleUser': True
+        }
+        
+        old_username = user['username']
+        new_username = data['name']
+        
+        # Update username if changed
+        if old_username != new_username:
+            user['username'] = new_username
             
-            # Store authenticated user info
-            authenticated_users[session_id] = {
-                'id': user_id,
-                'name': new_username,
-                'isGoogleUser': data.get('isGoogleUser', False)
-            }
-            
-            old_username = active_users.get(session_id)
-            
-            # Update the user ID to name mapping
-            user_id_to_name[user_id] = new_username
-            
-            # Check if this is a page refresh for an already authenticated user
-            is_reconnect = previous_username == new_username
-            
-            # Only announce name change if it's a new authentication or username actually changed
-            if old_username and old_username != new_username and not is_reconnect:
-                # Record previous name for this session to handle disconnects properly
-                if session_id not in session_to_previous_names:
-                    session_to_previous_names[session_id] = []
-                session_to_previous_names[session_id].append(old_username)
-                
-                active_users[session_id] = new_username
-                
-                # Notify all users about the username change
+            # Only send system message for new logins, not refreshes
+            if is_new_login:
                 system_message = message_service.add_message(
                     'System', 
-                    f'{old_username} is now known as {new_username}'
+                    f"Anonymous {old_username} logged in as {new_username}"
                 )
                 emit('new_message', system_message.to_dict(), broadcast=True)
-                
-                # Add old name to renamed_users to prevent "left the chat" message
-                renamed_users.add(old_username)
-                
-                # Also add the old name to recent_disconnects to prevent "joined the chat" message
-                recent_disconnects[old_username] = datetime.utcnow()
-            else:
-                # Just update the username without a system message
-                active_users[session_id] = new_username
+        
+        # Update login status
+        user['is_logged_in'] = True
+        
+        # Send updated user info
+        emit('user_info', {
+            'user_id': user_id,
+            'username': user['username'],
+            'is_logged_in': True
+        })
     
     @socketio.on('deauthenticate')
     def handle_deauthentication():
-        """Handle user deauthentication"""
+        """Handle user logout"""
         session_id = request.sid
         
-        if session_id in authenticated_users:
-            # Get user ID before removing from authenticated users
-            user_id = authenticated_users[session_id]['id']
+        if session_id not in session_to_user_id:
+            return
             
-            # Remove from authenticated users
-            del authenticated_users[session_id]
-            
-            # Generate new random name
-            username = generate_random_name()
-            old_username = active_users.get(session_id)
-            active_users[session_id] = username
-            
-            # Send user their new assigned username
-            emit('user_info', {'username': username})
-            
-            # Notify all users about the username change
-            if old_username and old_username != username:
-                system_message = message_service.add_message(
-                    'System', 
-                    f'{old_username} is now known as {username}'
-                )
-                emit('new_message', system_message.to_dict(), broadcast=True)
-                
-                # Add old name to renamed_users to prevent "left the chat" message
-                renamed_users.add(old_username)
-            
-            # Clean up user ID to name mapping if this was the last session for this user
-            if not any(auth.get('id') == user_id for auth in authenticated_users.values()):
-                if user_id in user_id_to_name:
-                    del user_id_to_name[user_id]
+        user_id = session_to_user_id[session_id]
+        user = users[user_id]
+        
+        # Only process if user was actually logged in
+        if not user['is_logged_in']:
+            return
+        
+        google_name = user['username']
+        original_name = user['original_name']
+        
+        # Restore original name
+        user['username'] = original_name
+        user['is_logged_in'] = False
+        user['google_data'] = None
+        
+        # Send system message for logout
+        system_message = message_service.add_message(
+            'System', 
+            f"{google_name} logged out and now known as {original_name}"
+        )
+        emit('new_message', system_message.to_dict(), broadcast=True)
+        
+        # Send updated user info
+        emit('user_info', {
+            'user_id': user_id,
+            'username': user['username'],
+            'is_logged_in': False
+        })
     
     @socketio.on('disconnect')
     def handle_disconnect():
         """Handle client disconnection"""
         session_id = request.sid
-        if session_id in active_users:
-            username = active_users[session_id]
+        
+        if session_id not in session_to_user_id:
+            return
             
-            # Store the disconnected username with a timestamp to handle page refreshes properly
-            recent_disconnects[username] = datetime.utcnow()
-            
-            # If this session had previous usernames, also add them to recent_disconnects
-            # and to renamed_users set to prevent "left the chat" messages
-            if session_id in session_to_previous_names:
-                for prev_name in session_to_previous_names[session_id]:
-                    if prev_name not in recent_disconnects:
-                        recent_disconnects[prev_name] = datetime.utcnow()
-                        renamed_users.add(prev_name)
-                # Clean up the previous names tracking
-                del session_to_previous_names[session_id]
-            
-            # Clean up old entries from recent_disconnects (older than 3 seconds)
-            current_time = datetime.utcnow()
-            expired_usernames = [
-                u for u, t in recent_disconnects.items() 
-                if current_time - t > timedelta(seconds=3)
-            ]
-            for u in expired_usernames:
-                if u in recent_disconnects:
-                    # Make sure this username isn't currently in use by any active session
-                    if u not in active_users.values():
-                        # Check if this name is not a previous name of any active user
-                        is_previous_name = False
-                        for names in session_to_previous_names.values():
-                            if u in names:
-                                is_previous_name = True
-                                break
-                                
-                        # Only send "left the chat" if it's not a renamed user
-                        if not is_previous_name and u not in renamed_users:
-                            # Add "left the chat" message for truly disconnected users
-                            system_message = message_service.add_message('System', f'{u} has left the chat')
-                            emit('new_message', system_message.to_dict(), broadcast=True)
-                    
-                    del recent_disconnects[u]
-            
-            # Clean up old entries from renamed_users (after a while)
-            # This prevents the set from growing indefinitely
-            if len(renamed_users) > 100:  # Arbitrary limit
-                renamed_users.clear()
-            
-            del active_users[session_id]
-            
-            # Clean up authenticated users if needed
-            if session_id in authenticated_users:
-                del authenticated_users[session_id]
+        user_id = session_to_user_id[session_id]
+        
+        # Add to recent disconnects with timestamp
+        recent_disconnects[user_id] = datetime.utcnow()
+        
+        # Remove session mapping
+        del session_to_user_id[session_id]
+        
+        # Schedule cleanup of disconnects after delay (5 seconds)
+        socketio.start_background_task(
+            check_disconnects, 
+            socketio,
+            user_id, 
+            users[user_id]['username']
+        )
     
     @socketio.on('send_message')
     def handle_message(data):
@@ -211,11 +182,42 @@ def register_socket_events(socketio):
         session_id = request.sid
         content = data.get('message', '').strip()
         
-        if not content:
+        if not content or session_id not in session_to_user_id:
             return
             
-        username = active_users.get(session_id, 'Unknown User')
+        user_id = session_to_user_id[session_id]
+        username = users[user_id]['username']
+        
         message = message_service.add_message(username, content)
         
         # Broadcast the message to all connected clients
         emit('new_message', message.to_dict(), broadcast=True)
+
+def check_disconnects(socketio, user_id, username):
+    """Check if a disconnect is permanent after delay"""
+    # Wait 5 seconds
+    socketio.sleep(5)
+    
+    # If still in recent_disconnects and no active sessions, consider left
+    if user_id in recent_disconnects:
+        # Check if this user still has any active sessions
+        has_active_sessions = False
+        for active_user_id in session_to_user_id.values():
+            if active_user_id == user_id:
+                has_active_sessions = True
+                break
+        
+        if not has_active_sessions:
+            # Send "left the chat" message
+            system_message = message_service.add_message(
+                'System', 
+                f"{username} has left the chat"
+            )
+            socketio.emit('new_message', system_message.to_dict())
+            
+
+            if user_id in users and user_id not in session_to_user_id.values():
+                del users[user_id]
+        
+        # Remove from recent disconnects
+        del recent_disconnects[user_id]

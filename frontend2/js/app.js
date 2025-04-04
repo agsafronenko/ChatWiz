@@ -14,9 +14,19 @@ document.addEventListener("DOMContentLoaded", function () {
   authService.init();
   const messageManager = new MessageManager();
 
+  // Track current user state
+  let currentUser = {
+    user_id: null,
+    username: null,
+    is_logged_in: false,
+  };
+
   // Handle user login
   authService.onLogin((user) => {
     console.log("User logged in:", user);
+
+    // Update current user state
+    currentUser.is_logged_in = true;
 
     // Update UI to show logged in state
     usernameElement.textContent = user.name;
@@ -53,6 +63,9 @@ document.addEventListener("DOMContentLoaded", function () {
   authService.onLogout(() => {
     console.log("User logged out");
 
+    // Update current user state
+    currentUser.is_logged_in = false;
+
     // Update UI to show logged out state
     logoutButton.style.display = "none";
     googleLoginBtn.style.display = "block"; // Show Google login button
@@ -69,12 +82,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Set up socket event listeners
   socketService.onUserInfo((data) => {
-    // Only update username if not logged in with Google
-    if (!authService.isAuthenticated()) {
-      usernameElement.textContent = data.username;
+    // Update current user data
+    currentUser.user_id = data.user_id;
+    currentUser.username = data.username;
+    currentUser.is_logged_in = data.is_logged_in;
 
-      // Store username in localStorage
-      localStorage.setItem("anonymousUsername", data.username);
+    // Update UI
+    usernameElement.textContent = data.username;
+
+    // Update auth UI based on login status
+    if (data.is_logged_in) {
+      logoutButton.style.display = "block";
+      googleLoginBtn.style.display = "none";
+    } else {
+      logoutButton.style.display = "none";
+      googleLoginBtn.style.display = "block";
+
+      // Remove profile picture if exists when logged out
+      const profileDiv = userInfo.querySelector(".user-profile");
+      if (profileDiv) {
+        profileDiv.remove();
+      }
     }
   });
 
@@ -113,15 +141,6 @@ document.addEventListener("DOMContentLoaded", function () {
   logoutButton.addEventListener("click", function () {
     authService.logout();
   });
-
-  // Hide Google button if already authenticated
-  if (authService.isAuthenticated()) {
-    googleLoginBtn.style.display = "none";
-    logoutButton.style.display = "block";
-  } else {
-    googleLoginBtn.style.display = "block";
-    logoutButton.style.display = "none";
-  }
 
   // Handle page unload
   window.addEventListener("beforeunload", function () {
