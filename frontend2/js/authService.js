@@ -27,7 +27,10 @@ class AuthService {
       cancel_on_tap_outside: true,
     });
 
-    google.accounts.id.renderButton(document.getElementById("googleLoginBtn"), {
+    // Store the rendered button element for later hiding/showing
+    this.googleButton = document.getElementById("googleLoginBtn");
+
+    google.accounts.id.renderButton(this.googleButton, {
       theme: "outline",
       size: "medium",
       text: "signin_with",
@@ -43,6 +46,11 @@ class AuthService {
       try {
         this.user = JSON.parse(user);
         this.notifyLoginCallbacks(this.user);
+
+        // Hide Google button when already logged in
+        if (this.googleButton) {
+          this.googleButton.style.display = "none";
+        }
       } catch (e) {
         console.error("Failed to parse stored user data");
         localStorage.removeItem("chatUser");
@@ -68,6 +76,11 @@ class AuthService {
     // Save to local storage
     localStorage.setItem("chatUser", JSON.stringify(this.user));
 
+    // Hide Google button when logged in
+    if (this.googleButton) {
+      this.googleButton.style.display = "none";
+    }
+
     // Notify callbacks
     this.notifyLoginCallbacks(this.user);
   }
@@ -89,6 +102,11 @@ class AuthService {
   logout() {
     this.user = null;
     localStorage.removeItem("chatUser");
+
+    // Show Google button again after logout
+    if (this.googleButton) {
+      this.googleButton.style.display = "block";
+    }
 
     // Notify callbacks
     this.notifyLogoutCallbacks();

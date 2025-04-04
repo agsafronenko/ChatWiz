@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const logoutButton = document.getElementById("logoutBtn");
   const authSection = document.getElementById("authSection");
   const userInfo = document.getElementById("userInfo");
+  const googleLoginBtn = document.getElementById("googleLoginBtn");
 
   // Initialize authentication and message manager
   authService.init();
@@ -20,6 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Update UI to show logged in state
     usernameElement.textContent = user.name;
     logoutButton.style.display = "block";
+    googleLoginBtn.style.display = "none"; // Hide Google login button
 
     // Add profile picture if available
     if (user.picture) {
@@ -53,6 +55,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Update UI to show logged out state
     logoutButton.style.display = "none";
+    googleLoginBtn.style.display = "block"; // Show Google login button
 
     // Remove profile picture if exists
     const profileDiv = userInfo.querySelector(".user-profile");
@@ -69,6 +72,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // Only update username if not logged in with Google
     if (!authService.isAuthenticated()) {
       usernameElement.textContent = data.username;
+
+      // Store username in localStorage
+      localStorage.setItem("anonymousUsername", data.username);
     }
   });
 
@@ -108,10 +114,17 @@ document.addEventListener("DOMContentLoaded", function () {
     authService.logout();
   });
 
+  // Hide Google button if already authenticated
+  if (authService.isAuthenticated()) {
+    googleLoginBtn.style.display = "none";
+    logoutButton.style.display = "block";
+  } else {
+    googleLoginBtn.style.display = "block";
+    logoutButton.style.display = "none";
+  }
+
   // Handle page unload
   window.addEventListener("beforeunload", function () {
     socketService.disconnect();
   });
-
-  window.SOCKET_ENDPOINT = CONFIG.SOCKET_ENDPOINT;
 });
