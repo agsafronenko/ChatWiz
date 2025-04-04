@@ -8,11 +8,12 @@ import uuid
 # Main user store - maps user IDs to their data
 users = {}
 
-# Session mapping - maps session IDs to user IDs
+# Session mapping - maps session IDs to user ID
 session_to_user_id = {}
-
 # Track disconnects to handle page refreshes
 recent_disconnects = {}
+# Map Google IDs to our user IDs
+google_id_to_user_id = {}
 
 def register_socket_events(socketio):
     """Register all socket.io event handlers"""
@@ -28,6 +29,7 @@ def register_socket_events(socketio):
             user_id = request.args.get('user_id')
             
         is_new_user = False
+
         
         # If no user_id or invalid user_id, create a new user
         if not user_id or user_id not in users:
@@ -42,6 +44,11 @@ def register_socket_events(socketio):
                 'original_name': username,  # Store original name for logout
                 'is_logged_in': False
             }
+        print("--------------------------------")
+        print("--------------------------------")
+        print("--------------------------------")
+        print("user_id --->", user_id)
+        print("username ->", users[user_id]['username'])
         
         # Map this session to the user ID
         session_to_user_id[session_id] = user_id
@@ -77,15 +84,53 @@ def register_socket_events(socketio):
         if session_id not in session_to_user_id:
             return
             
-        user_id = session_to_user_id[session_id]
-        user = users[user_id]
+        # Current user ID from the session
+        current_user_id = session_to_user_id[session_id]
+        google_id = data.get('id')
+        
+        if not google_id:
+            return
+            
+        # Check if this Google ID is already associated with an existing user
+        if google_id in google_id_to_user_id:
+            # Get the previously associated user ID
+            existing_user_id = google_id_to_user_id[google_id]
+            
+            # Check if the existing user ID is still valid
+            if existing_user_id in users:
+                # This is a returning Google user with a new temporary ID
+                if current_user_id != existing_user_id:
+                    # Transfer to the existing user ID
+                    old_username = users[current_user_id]['username']
+                    
+                    # Update the session mapping
+                    session_to_user_id[session_id] = existing_user_id
+                    
+                    # Clean up the temporary user
+                    if current_user_id in users:
+                        del users[current_user_id]
+                    
+                    # Set the current user ID to the existing one
+                    current_user_id = existing_user_id
+                    
+                    # Notify about the identity change
+                    system_message = message_service.add_message(
+                        'System', 
+                        f"Anonymous {old_username} is returning as {users[existing_user_id]['original_name']}"
+                    )
+                    emit('new_message', system_message.to_dict(), broadcast=True)
+        else:
+            # First time this Google ID is seen, associate it with the current user ID
+            google_id_to_user_id[google_id] = current_user_id
+        
+        user = users[current_user_id]
         
         # Check if this is a new login or a refresh after login
         is_new_login = not user['is_logged_in']
         
         # Store Google data
         user['google_data'] = {
-            'id': data.get('id'),
+            'id': google_id,
             'name': data.get('name'),
             'isGoogleUser': True
         }
@@ -110,7 +155,7 @@ def register_socket_events(socketio):
         
         # Send updated user info
         emit('user_info', {
-            'user_id': user_id,
+            'user_id': current_user_id,
             'username': user['username'],
             'is_logged_in': True
         })
@@ -132,6 +177,7 @@ def register_socket_events(socketio):
         
         google_name = user['username']
         original_name = user['original_name']
+    
         
         # Restore original name
         user['username'] = original_name
@@ -208,6 +254,13 @@ def check_disconnects(socketio, user_id, username):
                 break
         
         if not has_active_sessions:
+            # Check if this user has a Google association before removing
+            keep_user = False
+            for google_id, mapped_user_id in google_id_to_user_id.items():
+                if mapped_user_id == user_id:
+                    keep_user = True
+                    break
+            
             # Send "left the chat" message
             system_message = message_service.add_message(
                 'System', 
@@ -215,8 +268,8 @@ def check_disconnects(socketio, user_id, username):
             )
             socketio.emit('new_message', system_message.to_dict())
             
-
-            if user_id in users and user_id not in session_to_user_id.values():
+            # Only remove users that don't have Google account association
+            if not keep_user and user_id in users and user_id not in session_to_user_id.values():
                 del users[user_id]
         
         # Remove from recent disconnects
