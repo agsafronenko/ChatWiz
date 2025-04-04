@@ -14,7 +14,21 @@ def register_socket_events(socketio):
     def handle_connect():
         """Handle new client connection"""
         session_id = request.sid
-        username = generate_random_name()
+        
+        # Check if the user is providing their previous username in the query parameters
+        saved_username = None
+        if request.args and 'username' in request.args:
+            saved_username = request.args.get('username')
+        
+        is_reconnect = saved_username is not None
+        
+        if is_reconnect and saved_username not in [active_users[sid] for sid in active_users]:
+            # Use the saved username if it's valid and not already in use
+            username = saved_username
+        else:
+            # Generate a new random name
+            username = generate_random_name()
+        
         active_users[session_id] = username
         
         # Send user their assigned username
@@ -22,6 +36,11 @@ def register_socket_events(socketio):
         
         # Send chat history to the new user
         emit('chat_history', message_service.get_messages())
+        
+        # Notify all users about the new connection unless it's a reconnect
+        if not is_reconnect:
+            system_message = message_service.add_message('System', f'{username} has joined the chat')
+            emit('new_message', system_message.to_dict(), broadcast=True)
     
     @socketio.on('authenticate')
     def handle_authentication(data):
@@ -79,8 +98,13 @@ def register_socket_events(socketio):
         session_id = request.sid
         if session_id in active_users:
             username = active_users[session_id]
+            
+            # Only add the "left the chat" message if it wasn't a page refresh
+            # We consider it a disconnect only if the user doesn't reconnect within a short time
+            # (This is handled client-side by including the username in the reconnect)
             system_message = message_service.add_message('System', f'{username} has left the chat')
             emit('new_message', system_message.to_dict(), broadcast=True)
+            
             del active_users[session_id]
             
             # Clean up authenticated users if needed

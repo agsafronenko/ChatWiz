@@ -7,14 +7,23 @@ class SocketService {
       newMessage: [],
     };
     this.authData = null;
+    this.reconnecting = false;
   }
 
   initSocket() {
-    // Get the server URL from an environment variable or use a default
     const serverUrl = CONFIG.SOCKET_ENDPOINT;
 
-    // Connect to the backend server
-    this.socket = io(serverUrl);
+    // Add query parameter with saved username if available
+    const savedUsername = localStorage.getItem("anonymousUsername");
+    const options = {};
+
+    if (savedUsername) {
+      options.query = { username: savedUsername };
+      this.reconnecting = true;
+    }
+
+    // Connect to the backend server with query parameters
+    this.socket = io(serverUrl, options);
 
     this.socket.on("connect", () => {
       console.log("Connected to server");
@@ -31,6 +40,10 @@ class SocketService {
 
     // Set up handlers for incoming events
     this.socket.on("user_info", (data) => {
+      // Store username in localStorage if not authenticated
+      if (!authService.isAuthenticated() && data.username) {
+        localStorage.setItem("anonymousUsername", data.username);
+      }
       this.eventCallbacks.userInfo.forEach((callback) => callback(data));
     });
 
@@ -69,6 +82,11 @@ class SocketService {
       return true;
     }
     return false;
+  }
+
+  // Get saved username from localStorage
+  getSavedUsername() {
+    return localStorage.getItem("anonymousUsername");
   }
 
   // Event listener registration
