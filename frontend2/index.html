@@ -3,36 +3,99 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Public Chat Room</title>
+    <title>Chat Room Deluxe</title>
     <link rel="stylesheet" href="css/style.css" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
-    <div class="chat-container">
-      <h1>Public Chat Room</h1>
-
-      <div id="userInfo" class="user-info">
-        <p>You are chatting as: <strong id="username">Connecting...</strong></p>
-        <div id="authSection" class="auth-section">
-          <div id="googleLoginBtn"></div>
-          <button id="logoutBtn" class="logout-btn" style="display: none">Logout</button>
+    <div class="main-container">
+      <!-- Sidebar Panel -->
+      <div id="sidebarPanel" class="sidebar">
+        <h2>Rooms</h2>
+        <div class="rooms-section">
+          <h3>Public Rooms <button id="addPublicRoomBtn" class="add-room-btn">+</button></h3>
+          <ul id="publicRoomList" class="room-list">
+            <!-- Public rooms will be populated here -->
+          </ul>
+        </div>
+        <div class="rooms-section">
+          <h3>Private Rooms <button id="addPrivateRoomBtn" class="add-room-btn">+</button></h3>
+          <ul id="privateRoomList" class="room-list">
+            <!-- Private rooms will be populated here -->
+          </ul>
+        </div>
+        <div id="invitePanel" class="invite-panel" style="display: none">
+          <h4>Invite Users to <span id="inviteRoomName"></span></h4>
+          <ul id="inviteUserList" class="invite-user-list">
+            <!-- Users available for invite -->
+          </ul>
+          <button id="closeInvitePanelBtn">Close</button>
         </div>
       </div>
 
-      <div class="chat-window">
-        <div id="messageList" class="message-list">
-          <div id="emptyState" class="empty-state">No messages yet. Be the first to say hello!</div>
+      <!-- Main Chat Area -->
+      <div class="chat-area">
+        <div id="userInfo" class="user-info">
+          <p>
+            You are chatting as: <strong id="username">Connecting...</strong>
+            <span class="room-indicator">in room: <strong id="currentRoomName">main</strong></span>
+          </p>
+          <div id="authSection" class="auth-section">
+            <div id="googleLoginBtn"></div>
+            <button id="logoutBtn" class="logout-btn" style="display: none">Logout</button>
+            <!-- Profile picture will be added here by JS -->
+          </div>
         </div>
 
-        <div class="message-input">
-          <form id="messageForm">
-            <input type="text" id="messageText" placeholder="Type a message..." autocomplete="off" />
-            <button type="submit" id="sendButton" disabled>Send</button>
-          </form>
+        <div class="chat-window">
+          <div id="messageList" class="message-list">
+            <div id="emptyState" class="empty-state">No messages yet. Be the first to say hello!</div>
+            <!-- Messages will be populated here -->
+          </div>
+
+          <div class="message-input">
+            <form id="messageForm">
+              <input type="text" id="messageText" placeholder="Type a message..." autocomplete="off" />
+              <button type="submit" id="sendButton" disabled>Send</button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Templates -->
+    <template id="roomItemTemplate">
+      <li class="room-item" data-room-name="">
+        <div class="room-header">
+          <span class="room-name"></span>
+          <button class="invite-btn" style="display: none" title="Invite users">+</button>
+          <!-- Show only for private rooms -->
+        </div>
+        <ul class="user-list"></ul>
+      </li>
+    </template>
+
+    <template id="roomNameInputTemplate">
+      <li class="room-item editing">
+        <input type="text" class="room-name-input" value="" placeholder="Enter room name..." />
+        <span class="validation-error" style="display: none; color: red; font-size: 0.8em"></span>
+      </li>
+    </template>
+
+    <template id="userListItemTemplate">
+      <li class="user-list-item" data-user-id="">
+        <span class="username"></span>
+      </li>
+    </template>
+
+    <template id="inviteUserItemTemplate">
+      <li class="invite-user-item" data-user-id="">
+        <span class="username"></span>
+        <button class="invite-action-btn">Invite</button>
+      </li>
+    </template>
+
+    <!-- Existing Message Templates -->
     <template id="userMessageTemplate">
       <div class="message">
         <div class="username"></div>
@@ -52,12 +115,24 @@
       </div>
     </template>
 
+    <!-- Notification Area -->
+    <div id="notificationArea" class="notification-area"></div>
+    <template id="inviteNotificationTemplate">
+      <div class="notification invite-notification" data-room-name="">
+        <p><strong class="inviter-name"></strong> invited you to join the private room: <strong></strong></p>
+        <button class="accept-invite-btn">Join</button>
+        <button class="dismiss-notification-btn">Dismiss</button>
+      </div>
+    </template>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/formatters.js"></script>
     <script src="js/authService.js"></script>
     <script src="js/socketService.js"></script>
     <script src="js/messageManager.js"></script>
+    <script src="js/roomManager.js"></script>
+    <!-- NEW -->
     <script src="js/app.js"></script>
   </body>
 </html>
